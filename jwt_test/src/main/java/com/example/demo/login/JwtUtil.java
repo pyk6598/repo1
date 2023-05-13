@@ -261,7 +261,7 @@ System.out.println(String.format("expireDate %s", expireDate));
 		doCookieProcess(args);
 	}
 	
-	public static JwtArgs makeJvArgs(HttpServletRequest request, HttpServletResponse response, SecretKey secretKey) {
+	public static JwtArgs makeJwtArgs(HttpServletRequest request, HttpServletResponse response, SecretKey secretKey) {
 		JwtArgs args = new JwtArgs();
 		//args.setCookieDomain("pyk.net");
 		args.setHttpRequest(request);

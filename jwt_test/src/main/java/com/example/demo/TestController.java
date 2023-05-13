@@ -32,7 +32,7 @@ public class TestController {
 			List<String> accessTokenList = JwtUtil.makeJwtTokenList(secretKey, payload, Arrays.asList(Duration.ofMinutes(1), Duration.ofMinutes(2)));
 			HttpServletRequest servletRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
 			HttpServletResponse servletResponse = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
-			JwtArgs args = JwtUtil.makeJvArgs(servletRequest, servletResponse, secretKey);
+			JwtArgs args = JwtUtil.makeJwtArgs(servletRequest, servletResponse, secretKey);
 			JwtUtil.sendJwtToken(args, accessTokenList.get(0), accessTokenList.get(1));
 			return "redirect:/";
 		}
@@ -48,7 +48,7 @@ public class TestController {
 	public Object logout() {
 		HttpServletRequest servletRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
 		HttpServletResponse servletResponse = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
-		JwtArgs args = JwtUtil.makeJvArgs(servletRequest, servletResponse, null);
+		JwtArgs args = JwtUtil.makeJwtArgs(servletRequest, servletResponse, null);
 		JwtUtil.removeJwtToken(args);
 		return "redirect:/";
 	}

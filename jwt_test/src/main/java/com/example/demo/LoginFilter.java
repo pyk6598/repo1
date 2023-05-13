@@ -25,7 +25,7 @@ public class LoginFilter extends OncePerRequestFilter{
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		JwtArgs args = JwtUtil.makeJvArgs(request, response, secretKey);
+		JwtArgs args = JwtUtil.makeJwtArgs(request, response, secretKey);
 		JwtUtil.verifyAndSlidingInFilter(args);
 
 //		args.setCompRefreshTokenFunc(t -> args.getRefreshToken());
