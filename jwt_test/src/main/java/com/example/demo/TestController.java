@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -52,5 +53,14 @@ public class TestController {
 		JwtArgs args = JwtUtil.makeJwtArgs(new JwtConf(), servletRequest, servletResponse, null);
 		JwtUtil.removeJwtToken(args);
 		return "redirect:/";
+	}
+	
+	@ResponseBody
+	@RequestMapping("/rest/getMap1")
+	public Object getMap1() {
+		Map map1 = new HashMap();
+		map1.put("가낟", "ㄹㅇㄴㄹㄴㅇㄹ");
+		map1.put("ㅇㄴㄹㄴㄹㅇㄴ", "ㄹㄴㅇㄱㄹㄴㅇㅇㄴㄹㄴㅇㄹ");
+		return map1;
 	}
 }
