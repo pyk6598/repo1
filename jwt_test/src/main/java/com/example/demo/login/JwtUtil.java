@@ -78,8 +78,8 @@ public abstract class JwtUtil {
 	 * 쿠키 만들기
 	 */
 	protected static Cookie makeCookie(JwtArgs args, String name) {
-		String cookieDomain = args.getCookieDomain();
-		String cookiePath = args.getCookiePath();
+		String cookieDomain = args.getConf().getCookieDomain();
+		String cookiePath = args.getConf().getCookiePath();
 		Cookie cookie = new Cookie(name, null);
 		cookie.setHttpOnly(true);
 		if(! ObjectUtils.isEmpty(cookieDomain))cookie.setDomain(cookieDomain);
@@ -119,10 +119,10 @@ public abstract class JwtUtil {
 	 */
 	public static void sendJwtToken(JwtArgs args, String accessToken, String refreshToken) {
 		if(! ObjectUtils.isEmpty(accessToken)) {
-			addCookie(args, args.getAccessTokenCookieName(), accessToken);
+			addCookie(args, args.getConf().getAccessTokenCookieName(), accessToken);
 		}
 		if(! ObjectUtils.isEmpty(refreshToken)) {
-			addCookie(args, args.getRefreshTokenCookieName(), refreshToken);
+			addCookie(args, args.getConf().getRefreshTokenCookieName(), refreshToken);
 		}
 	}
 	
@@ -130,8 +130,8 @@ public abstract class JwtUtil {
 	 * 쿠키 삭제. 로그아웃 처리
 	 */
 	public static void removeJwtToken(JwtArgs args) {
-		removeCookie(args, args.getAccessTokenCookieName());
-		removeCookie(args, args.getRefreshTokenCookieName());
+		removeCookie(args, args.getConf().getAccessTokenCookieName());
+		removeCookie(args, args.getConf().getRefreshTokenCookieName());
 	}
 
 	/**
@@ -142,8 +142,8 @@ public abstract class JwtUtil {
 		String accessToken = args.getAccessToken();
 		String refreshToken = args.getRefreshToken();
 		SecretKey secretKey = args.getSecretKey();
-		Function<Claims, String> compRefreshTokenFunc = args.getCompRefreshTokenFunc();
-		Duration accessTokenDuration = args.getAccessTokenDuration();
+		Function<Claims, String> compRefreshTokenFunc = args.getConf().getCompRefreshTokenFunc();
+		Duration accessTokenDuration = args.getConf().getAccessTokenDuration();
 		if(ObjectUtils.isEmpty(accessToken))return;
 		if(ObjectUtils.isEmpty(refreshToken))return;
 		boolean isAccessTokenExpired = false;
@@ -196,7 +196,7 @@ public abstract class JwtUtil {
 		String accessToken = args.getAccessToken();
 		if(ObjectUtils.isEmpty(accessToken))return;
 		SecretKey secretKey = args.getSecretKey();
-		Duration accessTokenDuration = args.getAccessTokenDuration();
+		Duration accessTokenDuration = args.getConf().getAccessTokenDuration();
 		try {
 			Jws<Claims> jws = verifyJwtToken(secretKey, accessToken);
 			// 액세스 토큰 검증 = 로그인 검증 
@@ -204,7 +204,7 @@ public abstract class JwtUtil {
 System.out.println(String.format("expireDate %s", expireDate));
 			long expireTime = expireDate.getTime() - System.currentTimeMillis();
 			Claims payload = jws.getBody();
-			if(expireTime < args.getAccessTokenRegenDuration().toMillis()) {
+			if(expireTime < args.getConf().getAccessTokenRegenDuration().toMillis()) {
 				// 액세스 토큰 만료 30분 밖에 안남았다면 1시간 연장
 				String newAccessToken = JwtUtil.makeJwtToken(secretKey, accessTokenDuration, payload);
 				args.setNewAccessToken(newAccessToken);
@@ -224,8 +224,8 @@ System.out.println(String.format("expireDate %s", expireDate));
 	 * verify 후처리. 쿠키 처리
 	 */
 	protected static void doCookieProcess(JwtArgs args) {
-		String accessTokenCookieName = args.getAccessTokenCookieName();
-		String refreshTokenCookieName = args.getRefreshTokenCookieName();
+		String accessTokenCookieName = args.getConf().getAccessTokenCookieName();
+		String refreshTokenCookieName = args.getConf().getRefreshTokenCookieName();
 		String accessToken = args.getAccessToken();
 		String refreshToken = args.getRefreshToken();
 		String newAccessToken = args.getNewAccessToken();
@@ -261,13 +261,14 @@ System.out.println(String.format("expireDate %s", expireDate));
 		doCookieProcess(args);
 	}
 	
-	public static JwtArgs makeJwtArgs(HttpServletRequest request, HttpServletResponse response, SecretKey secretKey) {
+	public static JwtArgs makeJwtArgs(JwtConf conf, HttpServletRequest request, HttpServletResponse response, SecretKey secretKey) {
 		JwtArgs args = new JwtArgs();
 		//args.setCookieDomain("pyk.net");
+		args.setConf(conf);
 		args.setHttpRequest(request);
 		args.setHttpResponse(response);
-		String accessToken = JwtUtil.getCookieValue(args, args.getAccessTokenCookieName());
-		String refreshToken = JwtUtil.getCookieValue(args, args.getRefreshTokenCookieName());
+		String accessToken = JwtUtil.getCookieValue(args, args.getConf().getAccessTokenCookieName());
+		String refreshToken = JwtUtil.getCookieValue(args, args.getConf().getRefreshTokenCookieName());
 		args.setAccessToken(accessToken);
 		args.setRefreshToken(refreshToken);
 		args.setSecretKey(secretKey);
