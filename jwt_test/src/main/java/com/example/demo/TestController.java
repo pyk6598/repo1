@@ -13,7 +13,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -57,10 +59,32 @@ public class TestController {
 	
 	@ResponseBody
 	@RequestMapping("/rest/getMap1")
-	public Object getMap1() {
+	public Object getMap1(
+			@RequestHeader Map headers,
+			@RequestParam Map params
+			) {
 		Map map1 = new HashMap();
 		map1.put("가낟", "ㄹㅇㄴㄹㄴㅇㄹ");
 		map1.put("ㅇㄴㄹㄴㄹㅇㄴ", "ㄹㄴㅇㄱㄹㄴㅇㅇㄴㄹㄴㅇㄹ");
 		return map1;
 	}
+
+	@ResponseBody
+	@RequestMapping("/rest/callGetMap1")
+	public Object callGetMap1() {
+		//HttpComponentsClientHttpReuestFactory factory = new HttpComponentsClientHttpRequestFactory();
+		
+		Duration.ofSeconds(1).toMillisPart();
+		
+		//Duration.ofSeconds(1).toMillis()
+		
+		//factory.setConnectTimeout();
+		//factory.setReadTimeout(Duration.ofSeconds(10).toMillis());
+
+		return null;
+
+
+
+	}
+
 }
