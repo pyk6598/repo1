@@ -75,72 +75,6 @@ public abstract class JwtUtil {
 		}
 		return jwtTokenList;
 	}
-	
-	/**
-	 * 인증서버에서 아이디 비번 정상이면 아래 호출
-	 */
-	public static void sendJwtToken(JwtVerifyArgs args, String accessToken, String refreshToken) {
-		if(! ObjectUtils.isEmpty(accessToken)) {
-			addCookie(args, args.getAccessTokenCookieName(), accessToken);
-		}
-		if(! ObjectUtils.isEmpty(refreshToken)) {
-			addCookie(args, args.getRefreshTokenCookieName(), refreshToken);
-		}
-	}
-
-	/**
-	 * 필터에서 수행하는 로그인 검증(= 토큰 검증)
-	 * 액세스 토큰 만료시 리프레시 토큰 검증하여 액세스 토큰 재발급
-	 */
-	protected static void verifyAndRefresh(JwtVerifyArgs args) {
-		String accessToken = args.getAccessToken();
-		String refreshToken = args.getRefreshToken();
-		SecretKey secretKey = args.getSecretKey();
-		Function<Jws<Claims>, String> compRefreshTokenFunc = args.getCompRefreshTokenFunc();
-		Duration accessTokenDuration = args.getAccessTokenDuration();
-		if(ObjectUtils.isEmpty(accessToken))return;
-		if(ObjectUtils.isEmpty(refreshToken))return;
-		boolean isAccessTokenExpired = false;
-		Jws<Claims> jws = null;
-		try {
-			jws = verifyJwtToken(secretKey, accessToken);
-			// 액세스 토큰 검증 = 로그인 검증 
-			args.setJws(jws);
-			args.setValid(true);
-			return;
-		}catch(ExpiredJwtException expiredAccess) {
-			// 액세스 토큰 만료로 재발급 필요
-			isAccessTokenExpired = true;
-		}catch(Exception error){
-			// 그 외 에러는 로그인 검증 실패이므로 에러 리턴
-			args.setValid(false);
-			args.setException(error);
-			return;
-		}
-		// 아래부분은 액세스 토큰 만료되었을 경우만 실행된다.
-		try {
-			jws = verifyJwtToken(secretKey, refreshToken);
-		}catch(Exception error) {
-			args.setValid(false);
-			args.setException(error);
-			return;
-		}
-		// 리프레시 토큰으로 액세스 토큰 재발급
-		// 리프레시 토큰은 반드시 서버에 저장된 값과 비교해야 한다.
-		String compRefreshToken = compRefreshTokenFunc.apply(jws);
-		if(! refreshToken.equals(compRefreshToken)) {
-			// 서버의 리프레시 토큰과 틀리면 리턴
-			args.setValid(false);
-			args.setMessage("refresh token is not matched");
-			return;
-		}
-		// 액세스토큰 재발급
-		Claims payload = jws.getBody();
-		String newAccessToken = JwtUtil.makeJwtToken(secretKey, accessTokenDuration, payload);
-		args.setValid(true);
-		args.setJws(jws);
-		args.setNewAccessToken(newAccessToken);
-	}
 
 	/**
 	 * 쿠키 만들기
@@ -185,6 +119,77 @@ public abstract class JwtUtil {
 		return URLDecoder.decode(cookieValue, StandardCharsets.UTF_8);
 	}
 	/**
+	 * 인증서버에서 아이디 비번 정상이면 아래 호출
+	 */
+	public static void sendJwtToken(JwtVerifyArgs args, String accessToken, String refreshToken) {
+		if(! ObjectUtils.isEmpty(accessToken)) {
+			addCookie(args, args.getAccessTokenCookieName(), accessToken);
+		}
+		if(! ObjectUtils.isEmpty(refreshToken)) {
+			addCookie(args, args.getRefreshTokenCookieName(), refreshToken);
+		}
+	}
+	
+	public static void removeJwtToken(JwtVerifyArgs args) {
+		removeCookie(args, args.getAccessTokenCookieName());
+		removeCookie(args, args.getRefreshTokenCookieName());
+	}
+
+	/**
+	 * 필터에서 수행하는 로그인 검증(= 토큰 검증)
+	 * 액세스 토큰 만료시 리프레시 토큰 검증하여 액세스 토큰 재발급
+	 */
+	protected static void verifyAndRefresh(JwtVerifyArgs args) {
+		String accessToken = args.getAccessToken();
+		String refreshToken = args.getRefreshToken();
+		SecretKey secretKey = args.getSecretKey();
+		Function<Claims, String> compRefreshTokenFunc = args.getCompRefreshTokenFunc();
+		Duration accessTokenDuration = args.getAccessTokenDuration();
+		if(ObjectUtils.isEmpty(accessToken))return;
+		if(ObjectUtils.isEmpty(refreshToken))return;
+		boolean isAccessTokenExpired = false;
+		Jws<Claims> jws = null;
+		try {
+			jws = verifyJwtToken(secretKey, accessToken);
+			// 액세스 토큰 검증 = 로그인 검증 
+			args.setClaims(jws.getBody());
+			args.setValid(true);
+			return;
+		}catch(ExpiredJwtException expiredAccess) {
+			// 액세스 토큰 만료로 재발급 필요
+			isAccessTokenExpired = true;
+		}catch(Exception error){
+			// 그 외 에러는 로그인 검증 실패이므로 에러 리턴
+			args.setValid(false);
+			args.setException(error);
+			return;
+		}
+		// 아래부분은 액세스 토큰 만료되었을 경우만 실행된다.
+		try {
+			jws = verifyJwtToken(secretKey, refreshToken);
+		}catch(Exception error) {
+			args.setValid(false);
+			args.setException(error);
+			return;
+		}
+		// 리프레시 토큰으로 액세스 토큰 재발급
+		// 리프레시 토큰은 반드시 서버에 저장된 값과 비교해야 한다.
+		String compRefreshToken = compRefreshTokenFunc.apply(jws.getBody());
+		if(! refreshToken.equals(compRefreshToken)) {
+			// 서버의 리프레시 토큰과 틀리면 리턴
+			args.setValid(false);
+			args.setMessage("refresh token is not matched");
+			return;
+		}
+		// 액세스토큰 재발급
+		Claims payload = jws.getBody();
+		String newAccessToken = JwtUtil.makeJwtToken(secretKey, accessTokenDuration, payload);
+		args.setValid(true);
+		args.setClaims(jws.getBody());
+		args.setNewAccessToken(newAccessToken);
+	}
+
+	/**
 	 * 필터에서 수행하는 로그인 검증(= 토큰 검증)
 	 * 리프레시 토큰 대신 액세스 토큰 만료전 재발급 수행
 	 */
@@ -205,7 +210,7 @@ System.out.println(String.format("expireDate %s", expireDate));
 				String newAccessToken = JwtUtil.makeJwtToken(secretKey, accessTokenDuration, payload);
 				args.setNewAccessToken(newAccessToken);
 			}
-			args.setJws(jws);
+			args.setClaims(jws.getBody());
 			args.setValid(true);
 			return;
 		}catch(Exception error){

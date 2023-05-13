@@ -9,20 +9,19 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
 import lombok.Data;
 
 @Data
 public class JwtVerifyArgs {
 	// 고정 부분
-	private Duration accessTokenDuration = Duration.ofHours(1);// 액세스 토큰 발급 또는 재발급 만료 시간
-	private Duration refreshTokenDuration = Duration.ofHours(6);// 리프레시 토큰 만료 시간
-	private Duration accessTokenRegenDuration = Duration.ofMinutes(30);// 액세스 토큰 재발급 위한 만료시간 체크
+	private Duration accessTokenDuration = Duration.ofSeconds(5);// 액세스 토큰 발급 또는 재발급 만료 시간
+	private Duration refreshTokenDuration = Duration.ofSeconds(10);// 리프레시 토큰 만료 시간
+	private Duration accessTokenRegenDuration = Duration.ofMinutes(3);// 액세스 토큰 재발급 위한 만료시간 체크
 	private String accessTokenCookieName = "X-AC-TK";// 액세스 토큰 쿠키 키
 	private String refreshTokenCookieName = "X-RF-TK";// 리프레시 토큰 쿠키 키
 	private String cookieDomain;
 	private String cookiePath = "/";
-	private Function<Jws<Claims>, String> compRefreshTokenFunc;
+	private Function<Claims, String> compRefreshTokenFunc;
 	// 파라미터 부분
 	private HttpServletRequest httpRequest;
 	private HttpServletResponse httpResponse;
@@ -32,7 +31,7 @@ public class JwtVerifyArgs {
 	// 결과 부분 
 	private String newAccessToken;
 	private boolean isValid = false;
-	private Jws<Claims> jws;
+	private Claims claims;
 	private Exception exception;
 	private String message;
 }

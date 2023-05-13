@@ -27,10 +27,13 @@ public class LoginFilter extends OncePerRequestFilter{
 			throws ServletException, IOException {
 		JwtVerifyArgs args = JwtUtil.makeJvArgs(request, response, secretKey);
 		JwtUtil.verifyAndSlidingInFilter(args);
+
+//		args.setCompRefreshTokenFunc(t -> args.getRefreshToken());
+//		JwtUtil.verifyAndRefreshInFilter(args);
 		System.out.println(args);
 
-		if(args.getJws() != null) {
-			request.setAttribute("loginUser", args.getJws().getBody());
+		if(args.getClaims() != null) {
+			request.setAttribute("loginUser", args.getClaims());
 		}
 		
 		
