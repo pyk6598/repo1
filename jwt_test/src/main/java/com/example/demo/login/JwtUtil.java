@@ -126,6 +126,9 @@ public abstract class JwtUtil {
 		}
 	}
 	
+	/**
+	 * 쿠키 삭제. 로그아웃 처리
+	 */
 	public static void removeJwtToken(JwtArgs args) {
 		removeCookie(args, args.getAccessTokenCookieName());
 		removeCookie(args, args.getRefreshTokenCookieName());
