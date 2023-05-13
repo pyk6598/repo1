@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -35,7 +36,7 @@ public abstract class JwtUtil {
 	protected static String makeJwtToken(SecretKey secretKey, Duration expDuration, Map<String, Object> payload) {
 		Date now = new Date();
 		Claims claims = Jwts.claims();
-		claims.putAll(payload);
+		claims.putAll(new HashMap<>(payload));
 		claims.setIssuedAt(now);
 		claims.setExpiration(new Date(now.getTime() + expDuration.toMillis()));
 		JwtBuilder jb = Jwts.builder();
@@ -50,13 +51,10 @@ public abstract class JwtUtil {
 	 * 만료시간 지나지 않았는지 ExpiredJwtException
 	 */
 	protected static Jws<Claims> verifyJwtToken(SecretKey secretKey, String token) {
-		long t1 = System.currentTimeMillis();
 		Jws<Claims> jws = Jwts.parserBuilder() // (1)
 				.setSigningKey(secretKey) // (2)
 				.build() // (3)
 				.parseClaimsJws(token); // (4)
-		long t2 = System.currentTimeMillis();
-		System.out.println(t2 - t1);
 		return jws;
 	}
 
@@ -79,21 +77,19 @@ public abstract class JwtUtil {
 	/**
 	 * 쿠키 만들기
 	 */
-	protected static Cookie makeCookie(JwtVerifyArgs args, String name) {
+	protected static Cookie makeCookie(JwtArgs args, String name) {
+		String cookieDomain = args.getCookieDomain();
+		String cookiePath = args.getCookiePath();
 		Cookie cookie = new Cookie(name, null);
 		cookie.setHttpOnly(true);
-		if(! ObjectUtils.isEmpty(args.getCookieDomain())) {
-			cookie.setDomain(args.getCookieDomain());
-		}
-		if(! ObjectUtils.isEmpty(args.getCookiePath())) {
-			cookie.setPath(args.getCookiePath());
-		}
+		if(! ObjectUtils.isEmpty(cookieDomain))cookie.setDomain(cookieDomain);
+		if(! ObjectUtils.isEmpty(cookiePath))cookie.setPath(cookiePath);
 		return cookie;
 	}
 	/**
 	 * 쿠키 보내기
 	 */
-	protected static void addCookie(JwtVerifyArgs args, String name, String value) {
+	protected static void addCookie(JwtArgs args, String name, String value) {
 		Cookie cookie = makeCookie(args, name);
 		cookie.setValue(new URLEncoder().encode(value, StandardCharsets.UTF_8));
 		cookie.setMaxAge(-1);// 세션 쿠키
@@ -102,7 +98,7 @@ public abstract class JwtUtil {
 	/**
 	 * 쿠키 지우기
 	 */
-	protected static void removeCookie(JwtVerifyArgs args, String name) {
+	protected static void removeCookie(JwtArgs args, String name) {
 		Cookie cookie = makeCookie(args, name);
 		cookie.setValue("");
 		cookie.setMaxAge(0);// 쿠키 삭제
@@ -111,7 +107,7 @@ public abstract class JwtUtil {
 	/**
 	 * 쿠키값
 	 */
-	public static String getCookieValue(JwtVerifyArgs args, String name) {
+	public static String getCookieValue(JwtArgs args, String name) {
 		Cookie cookie = WebUtils.getCookie(args.getHttpRequest(), name);
 		if(cookie == null)return null;
 		String cookieValue = cookie.getValue();
@@ -121,7 +117,7 @@ public abstract class JwtUtil {
 	/**
 	 * 인증서버에서 아이디 비번 정상이면 아래 호출
 	 */
-	public static void sendJwtToken(JwtVerifyArgs args, String accessToken, String refreshToken) {
+	public static void sendJwtToken(JwtArgs args, String accessToken, String refreshToken) {
 		if(! ObjectUtils.isEmpty(accessToken)) {
 			addCookie(args, args.getAccessTokenCookieName(), accessToken);
 		}
@@ -130,7 +126,7 @@ public abstract class JwtUtil {
 		}
 	}
 	
-	public static void removeJwtToken(JwtVerifyArgs args) {
+	public static void removeJwtToken(JwtArgs args) {
 		removeCookie(args, args.getAccessTokenCookieName());
 		removeCookie(args, args.getRefreshTokenCookieName());
 	}
@@ -139,7 +135,7 @@ public abstract class JwtUtil {
 	 * 필터에서 수행하는 로그인 검증(= 토큰 검증)
 	 * 액세스 토큰 만료시 리프레시 토큰 검증하여 액세스 토큰 재발급
 	 */
-	protected static void verifyAndRefresh(JwtVerifyArgs args) {
+	protected static void verifyAndRefresh(JwtArgs args) {
 		String accessToken = args.getAccessToken();
 		String refreshToken = args.getRefreshToken();
 		SecretKey secretKey = args.getSecretKey();
@@ -183,9 +179,9 @@ public abstract class JwtUtil {
 		}
 		// 액세스토큰 재발급
 		Claims payload = jws.getBody();
-		String newAccessToken = JwtUtil.makeJwtToken(secretKey, accessTokenDuration, payload);
+		String newAccessToken = makeJwtToken(secretKey, accessTokenDuration, payload);
 		args.setValid(true);
-		args.setClaims(jws.getBody());
+		args.setClaims(payload);
 		args.setNewAccessToken(newAccessToken);
 	}
 
@@ -193,7 +189,7 @@ public abstract class JwtUtil {
 	 * 필터에서 수행하는 로그인 검증(= 토큰 검증)
 	 * 리프레시 토큰 대신 액세스 토큰 만료전 재발급 수행
 	 */
-	protected static void verifyAndSliding(JwtVerifyArgs args) {
+	protected static void verifyAndSliding(JwtArgs args) {
 		String accessToken = args.getAccessToken();
 		if(ObjectUtils.isEmpty(accessToken))return;
 		SecretKey secretKey = args.getSecretKey();
@@ -204,13 +200,13 @@ public abstract class JwtUtil {
 			Date expireDate = jws.getBody().getExpiration();
 System.out.println(String.format("expireDate %s", expireDate));
 			long expireTime = expireDate.getTime() - System.currentTimeMillis();
+			Claims payload = jws.getBody();
 			if(expireTime < args.getAccessTokenRegenDuration().toMillis()) {
 				// 액세스 토큰 만료 30분 밖에 안남았다면 1시간 연장
-				Claims payload = jws.getBody();
 				String newAccessToken = JwtUtil.makeJwtToken(secretKey, accessTokenDuration, payload);
 				args.setNewAccessToken(newAccessToken);
 			}
-			args.setClaims(jws.getBody());
+			args.setClaims(payload);
 			args.setValid(true);
 			return;
 		}catch(Exception error){
@@ -224,7 +220,7 @@ System.out.println(String.format("expireDate %s", expireDate));
 	/**
 	 * verify 후처리. 쿠키 처리
 	 */
-	protected static void doCookieProcess(JwtVerifyArgs args) {
+	protected static void doCookieProcess(JwtArgs args) {
 		String accessTokenCookieName = args.getAccessTokenCookieName();
 		String refreshTokenCookieName = args.getRefreshTokenCookieName();
 		String accessToken = args.getAccessToken();
@@ -249,7 +245,7 @@ System.out.println(String.format("expireDate %s", expireDate));
 	/**
 	 * 필터에서 수행할 로직
 	 */
-	public static void verifyAndRefreshInFilter(JwtVerifyArgs args) {
+	public static void verifyAndRefreshInFilter(JwtArgs args) {
 		verifyAndRefresh(args);
 		doCookieProcess(args);
 	}
@@ -257,13 +253,14 @@ System.out.println(String.format("expireDate %s", expireDate));
 	/**
 	 * 필터에서 수행할 로직
 	 */
-	public static void verifyAndSlidingInFilter(JwtVerifyArgs args) {
+	public static void verifyAndSlidingInFilter(JwtArgs args) {
 		verifyAndSliding(args);
 		doCookieProcess(args);
 	}
 	
-	public static JwtVerifyArgs makeJvArgs(HttpServletRequest request, HttpServletResponse response, SecretKey secretKey) {
-		JwtVerifyArgs args = new JwtVerifyArgs();
+	public static JwtArgs makeJvArgs(HttpServletRequest request, HttpServletResponse response, SecretKey secretKey) {
+		JwtArgs args = new JwtArgs();
+		//args.setCookieDomain("pyk.net");
 		args.setHttpRequest(request);
 		args.setHttpResponse(response);
 		String accessToken = JwtUtil.getCookieValue(args, args.getAccessTokenCookieName());
@@ -273,8 +270,7 @@ System.out.println(String.format("expireDate %s", expireDate));
 		args.setSecretKey(secretKey);
 		return args;
 	}
-	
-	
+
 	public static void main(String[] args) {
 		SecretKey sKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 		String token1 = makeJwtToken(sKey, Duration.ofSeconds(5), null);

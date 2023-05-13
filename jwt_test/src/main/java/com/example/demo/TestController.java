@@ -18,7 +18,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.example.demo.login.JwtUtil;
-import com.example.demo.login.JwtVerifyArgs;
+import com.example.demo.login.JwtArgs;
 
 @Controller
 public class TestController {
@@ -29,10 +29,10 @@ public class TestController {
 			SecretKey secretKey = LoginFilter.secretKey;
 			Map<String, Object> payload = new HashMap<>();
 			payload.put("username", username);
-			List<String> accessTokenList = JwtUtil.makeJwtTokenList(secretKey, payload, Arrays.asList(Duration.ofSeconds(1), Duration.ofSeconds(10)));
+			List<String> accessTokenList = JwtUtil.makeJwtTokenList(secretKey, payload, Arrays.asList(Duration.ofMinutes(1), Duration.ofMinutes(2)));
 			HttpServletRequest servletRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
 			HttpServletResponse servletResponse = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
-			JwtVerifyArgs args = JwtUtil.makeJvArgs(servletRequest, servletResponse, secretKey);
+			JwtArgs args = JwtUtil.makeJvArgs(servletRequest, servletResponse, secretKey);
 			JwtUtil.sendJwtToken(args, accessTokenList.get(0), accessTokenList.get(1));
 			return "redirect:/";
 		}
@@ -48,7 +48,7 @@ public class TestController {
 	public Object logout() {
 		HttpServletRequest servletRequest = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
 		HttpServletResponse servletResponse = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
-		JwtVerifyArgs args = JwtUtil.makeJvArgs(servletRequest, servletResponse, null);
+		JwtArgs args = JwtUtil.makeJvArgs(servletRequest, servletResponse, null);
 		JwtUtil.removeJwtToken(args);
 		return "redirect:/";
 	}

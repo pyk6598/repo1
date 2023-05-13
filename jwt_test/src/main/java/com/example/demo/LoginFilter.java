@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.demo.login.JwtUtil;
-import com.example.demo.login.JwtVerifyArgs;
+import com.example.demo.login.JwtArgs;
 
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -25,7 +25,7 @@ public class LoginFilter extends OncePerRequestFilter{
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		JwtVerifyArgs args = JwtUtil.makeJvArgs(request, response, secretKey);
+		JwtArgs args = JwtUtil.makeJvArgs(request, response, secretKey);
 		JwtUtil.verifyAndSlidingInFilter(args);
 
 //		args.setCompRefreshTokenFunc(t -> args.getRefreshToken());
